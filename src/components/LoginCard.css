@@ -1,0 +1,203 @@
+/* Container to center the card on screen */
+.card-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f4f7f6;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Card layout */
+.login-card {
+  background: #ffffff;
+  padding: 40px;
+  border-radius: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  max-width: 480px;
+  box-sizing: border-box;
+}
+
+/* Typography */
+.card-title {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #111111;
+}
+
+.card-subtitle {
+  margin: 0 0 24px 0;
+  font-size: 15px;
+  color: #718096;
+}
+
+/* Toggle Switch Styling */
+.toggle-container {
+  display: flex;
+  background-color: #edf2f7;
+  padding: 4px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+.toggle-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 10px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #4a5568;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.toggle-btn.active {
+  background-color: #ffffff;
+  color: #111111;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+/* Form Styles */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input-group label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a202c;
+}
+
+.input-group input,
+.select-wrapper select {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 15px;
+  background-color: #f1f3f5;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #2d3748;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input-group input::placeholder {
+  color: #a0aec0;
+}
+
+.input-group input:focus,
+.select-wrapper select:focus {
+  border-color: #00796b;
+}
+
+/* Custom Dropdown Chevron Positioning */
+.select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.select-wrapper select {
+  appearance: none; /* Removes native arrow */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  padding-right: 40px;
+}
+
+/* Modern chevron vector fallback */
+.select-wrapper::after {
+  content: '';
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 6px;
+  background-color: #a0aec0;
+  clip-path: polygon(100% 0%, 0 0%, 50% 100%);
+  pointer-events: none;
+}
+
+/* Interactive Action Buttons */
+.submit-btn {
+  background-color: #007465; /* Dark Teal matched color */
+  color: #ffffff;
+  border: none;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: background-color 0.2s;
+}
+
+.submit-btn:hover {
+  background-color: #005f52;
+}
+
+/* Contextual Divider Line */
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 24px 0;
+  color: #a0aec0;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.divider:not(:empty)::before {
+  margin-right: 12px;
+}
+
+.divider:not(:empty)::after {
+  margin-left: 12px;
+}
+
+/* Secondary Button (SSO) */
+.sso-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #1a202c;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 10px;
+  cursor: pointer;
+  width: 100%;
+  transition: background-color 0.2s;
+}
+
+.sso-btn:hover {
+  background-color: #f7fafc;
+}
+
+.google-icon {
+  flex-shrink: 0;
+}
