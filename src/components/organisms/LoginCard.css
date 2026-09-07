@@ -1,10 +1,9 @@
-/* Container to center the card on screen */
+/* Container override for split screen layout */
 .card-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  background-color: #f4f7f6;
+  background-color: transparent;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -110,14 +109,13 @@
 }
 
 .select-wrapper select {
-  appearance: none; /* Removes native arrow */
+  appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
   cursor: pointer;
   padding-right: 40px;
 }
 
-/* Modern chevron vector fallback */
 .select-wrapper::after {
   content: '';
   position: absolute;
@@ -133,7 +131,7 @@
 
 /* Interactive Action Buttons */
 .submit-btn {
-  background-color: #007465; /* Dark Teal matched color */
+  background-color: #007465;
   color: #ffffff;
   border: none;
   padding: 14px;
