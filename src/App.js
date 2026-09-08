@@ -1,32 +1,40 @@
-import React, { useState } from 'react';
-import AuthPage from './pages/AuthPage';
+import React, { useState, useEffect } from 'react';
+import { auth } from './firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import LoginCard from './components/organisms/LoginCard';
 import CitizenDashboard from './pages/CitizenDashboard';
-import './App.css';
 
-function App() {
-  const [currentPage, setCurrentPage] = useState('auth');
+export default function App() {
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleDemoAccess = (role) => {
-    if (role === 'Citizen') {
-      setCurrentPage('citizen-dashboard');
-    } else {
-      console.log(`Demo access for ${role} is not configured yet.`);
-    }
+  useEffect(() => {
+    // Persistent auth state listener
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await signOut(auth);
   };
 
-  const handleLogout = () => {
-    setCurrentPage('auth');
-  };
+  if (loading) {
+    return <div className="loading-screen">Loading SmartCity Vushtrri...</div>;
+  }
 
   return (
-    <div className="App-container">
-      {currentPage === 'auth' ? (
-        <AuthPage onDemoAccess={handleDemoAccess} />
+    <div className="app-container">
+      {currentUser ? (
+        <CitizenDashboard user={currentUser} onLogout={handleLogout} />
       ) : (
-        <CitizenDashboard onLogout={handleLogout} />
+        <div className="auth-page-wrapper">
+          <LoginCard />
+        </div>
       )}
     </div>
   );
 }
-
-export default App;

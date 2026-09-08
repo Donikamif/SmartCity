@@ -140,6 +140,8 @@
   width: 100%;
 }
 
+
+
 @media (max-width: 850px) {
   .auth-layout {
     flex-direction: column;
