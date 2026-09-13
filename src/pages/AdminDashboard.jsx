@@ -20,6 +20,8 @@ export default function AdminDashboard({ user, onLogout }) {
         upvotes: docSnap.data().upvotes || docSnap.data().votes || 0
       }));
       setReports(fetchedReports);
+    }, (error) => {
+      console.error("Error fetching reports:", error);
     });
 
     const qUsers = query(collection(db, "users"));
@@ -48,7 +50,6 @@ export default function AdminDashboard({ user, onLogout }) {
     }
   };
 
-  // Dynamic calculations from real citizen reports
   const totalReports = reports.length;
   const pendingCount = reports.filter(r => r.status === 'Pending').length;
   const inProgressCount = reports.filter(r => r.status === 'In Progress').length;
@@ -95,6 +96,7 @@ export default function AdminDashboard({ user, onLogout }) {
     switch ((type || '').toLowerCase()) {
       case 'high':
       case 'admin':
+      case 'blocked':
         return { backgroundColor: '#fee2e2', color: '#ef4444', border: '1px solid #fca5a5' };
       case 'medium':
       case 'officer':
@@ -109,11 +111,11 @@ export default function AdminDashboard({ user, onLogout }) {
   };
 
   const defaultUsers = [
-    { id: '1', name: 'John Doe', email: 'john@example.com', role: 'citizen', status: 'active', joined: '9/15/2024', reportsCount: 5 },
-    { id: '2', name: 'Jane Smith', email: 'jane@example.com', role: 'citizen', status: 'active', joined: '10/20/2024', reportsCount: 3 },
-    { id: '3', name: 'Officer Brown', email: 'brown@city.gov', role: 'officer', status: 'active', joined: '7/10/2024', reportsCount: 0 },
-    { id: '4', name: 'Officer Smith', email: 'smith@city.gov', role: 'officer', status: 'active', joined: '8/5/2024', reportsCount: 0 },
-    { id: '5', name: 'Admin User', email: 'admin@city.gov', role: 'admin', status: 'active', joined: '1/1/2024', reportsCount: 0 }
+    { id: '1', name: 'John Doe', email: 'john@example.com', role: 'citizen', status: 'active', joined: '9/15/2024' },
+    { id: '2', name: 'Jane Smith', email: 'jane@example.com', role: 'citizen', status: 'active', joined: '10/20/2024' },
+    { id: '3', name: 'Officer Brown', email: 'brown@city.gov', role: 'officer', status: 'active', joined: '7/10/2024' },
+    { id: '4', name: 'Officer Smith', email: 'smith@city.gov', role: 'officer', status: 'active', joined: '8/5/2024' },
+    { id: '5', name: 'Admin User', email: 'admin@city.gov', role: 'admin', status: 'active', joined: '1/1/2024' }
   ];
 
   const displayUsers = users.length > 0 ? users : defaultUsers;
@@ -124,9 +126,13 @@ export default function AdminDashboard({ user, onLogout }) {
     (u.role || '').toLowerCase().includes(userSearchQuery.toLowerCase())
   );
 
-  const getUserReportCount = (u) => {
-    if (u.reportsCount !== undefined) return u.reportsCount;
-    return reports.filter(r => r.userEmail === u.email || r.author === u.name || r.createdBy === u.email).length;
+  const formatDate = (timestamp) => {
+    if (!timestamp) return 'N/A';
+    if (timestamp.toDate) {
+      return timestamp.toDate().toLocaleDateString();
+    }
+    const date = new Date(timestamp);
+    return isNaN(date.getTime()) ? timestamp : date.toLocaleDateString();
   };
 
   return (
@@ -302,9 +308,6 @@ export default function AdminDashboard({ user, onLogout }) {
                           <span style={{ fontSize: '0.75rem', backgroundColor: '#ecfdf5', color: '#047857', padding: '2px 8px', borderRadius: '6px', fontWeight: 600, border: '1px solid #a7f3d0' }}>
                             {item.category}
                           </span>
-                          <span style={{ fontSize: '0.8rem', color: '#ef4444', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px' }}>
-                            📈 {item.upvotes || 0} votes
-                          </span>
                         </div>
                         <div style={{ fontSize: '0.85rem', fontWeight: 500, color: '#334155', lineHeight: 1.4 }}>
                           {item.title || item.description || 'Citizen civic report'}
@@ -389,9 +392,6 @@ export default function AdminDashboard({ user, onLogout }) {
                 </div>
 
                 <div style={{ position: 'relative', width: '280px', minWidth: '220px', flexShrink: 0 }}>
-                  <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
-                    🔍
-                  </span>
                   <input
                     type="text"
                     placeholder="Search users..."
@@ -399,7 +399,7 @@ export default function AdminDashboard({ user, onLogout }) {
                     onChange={(e) => setUserSearchQuery(e.target.value)}
                     style={{
                       width: '100%',
-                      padding: '10px 12px 10px 36px',
+                      padding: '10px 12px',
                       borderRadius: '8px',
                       border: '1px solid #cbd5e1',
                       fontSize: '0.85rem',
@@ -420,15 +420,14 @@ export default function AdminDashboard({ user, onLogout }) {
                       <th style={{ padding: '12px 16px' }}>Email</th>
                       <th style={{ padding: '12px 16px' }}>Role</th>
                       <th style={{ padding: '12px 16px' }}>Status</th>
-                      <th style={{ padding: '12px 16px' }}>Reports</th>
                       <th style={{ padding: '12px 16px' }}>Joined</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredUsers.length > 0 ? (
                       filteredUsers.map((u) => {
-                        const reportCount = getUserReportCount(u);
+                        const joinedDate = formatDate(u.createdAt || u.joined);
+
                         return (
                           <tr key={u.id} style={{ borderBottom: '1px solid #f1f5f9', color: '#334155' }}>
                             <td style={{ padding: '16px', fontWeight: 600, color: '#0f172a' }}>{u.name || 'Anonymous User'}</td>
@@ -457,33 +456,13 @@ export default function AdminDashboard({ user, onLogout }) {
                                 {u.status || 'active'}
                               </span>
                             </td>
-                            <td style={{ padding: '16px', fontWeight: 600 }}>{reportCount}</td>
-                            <td style={{ padding: '16px', color: '#64748b', fontSize: '0.85rem' }}>{u.joined || 'N/A'}</td>
-                            <td style={{ padding: '16px', textAlign: 'right' }}>
-                              <button
-                                onClick={() => {
-                                  alert(`Manage user: ${u.name || u.email}`);
-                                }}
-                                style={{
-                                  padding: '6px 12px',
-                                  borderRadius: '6px',
-                                  border: '1px solid #cbd5e1',
-                                  backgroundColor: '#ffffff',
-                                  color: '#334155',
-                                  fontSize: '0.8rem',
-                                  fontWeight: 600,
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                Edit Role
-                              </button>
-                            </td>
+                            <td style={{ padding: '16px', color: '#64748b', fontSize: '0.85rem' }}>{joinedDate}</td>
                           </tr>
                         );
                       })
                     ) : (
                       <tr>
-                        <td colSpan="7" style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
+                        <td colSpan="5" style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
                           No users found matching "{userSearchQuery}"
                         </td>
                       </tr>
