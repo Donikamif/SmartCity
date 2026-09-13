@@ -26,9 +26,12 @@ export default function CitizenDashboard({ user, onLogout }) {
     return () => unsubscribe();
   }, []);
 
+  // Filter out resolved reports for citizens, then apply category filter
+  const activeReports = reports.filter(r => r.status !== 'Resolved');
+
   const filteredReports = selectedCategory === 'All' 
-    ? reports 
-    : reports.filter(r => r.category === selectedCategory);
+    ? activeReports 
+    : activeReports.filter(r => r.category === selectedCategory);
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f0f4f8', fontFamily: 'system-ui, -apple-system, sans-serif' }}>

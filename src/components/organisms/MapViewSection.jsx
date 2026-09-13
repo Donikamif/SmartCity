@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { db } from '../../firebase';
@@ -15,6 +15,18 @@ L.Icon.Default.mergeOptions({
 
 // Default coordinates centered on Vushtrri, Kosovo
 const VUSHTRRI_CENTER = [42.8231, 20.9675];
+
+// Helper to fix Leaflet tile rendering glitches when mounting/resizing
+function MapInvalidator() {
+  const map = useMap();
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [map]);
+  return null;
+}
 
 export default function MapViewSection() {
   const [reports, setReports] = useState([]);
@@ -34,10 +46,12 @@ export default function MapViewSection() {
     return () => unsubscribe();
   }, []);
 
+  const activeReports = reports.filter(r => r.status !== 'Resolved');
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
-      {/* Map Container Card */}
+      {/* Map Container Card (Static / Normal Flow) */}
       <div style={{
         backgroundColor: '#ffffff',
         borderRadius: '16px',
@@ -45,7 +59,7 @@ export default function MapViewSection() {
         overflow: 'hidden',
         boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
       }}>
-        {/* Header */}
+      
         <div style={{
           padding: '16px 24px',
           borderBottom: '1px solid #f1f5f9',
@@ -69,24 +83,26 @@ export default function MapViewSection() {
             fontSize: '0.8rem',
             fontWeight: 600
           }}>
-            {reports.length} Reports Plotted
+            {activeReports.length} Reports Plotted
           </span>
         </div>
 
-        {/* Real Leaflet Map Render */}
-        <div style={{ height: '420px', width: '100%' }}>
+      
+        <div style={{ height: '420px', width: '100%', position: 'relative' }}>
           <MapContainer 
             center={VUSHTRRI_CENTER} 
             zoom={14} 
-            scrollWheelZoom={true}
+            scrollWheelZoom={false}
+            dragging={true}
             style={{ height: '100%', width: '100%' }}
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
+            <MapInvalidator />
 
-            {/* Default map pin on central Vushtrri */}
+          
             <Marker position={VUSHTRRI_CENTER}>
               <Popup>
                 <div style={{ padding: '4px' }}>
@@ -96,8 +112,8 @@ export default function MapViewSection() {
               </Popup>
             </Marker>
 
-            {/* Plot active Firestore reports if lat/lng are provided */}
-            {reports.map((report) => {
+            
+            {activeReports.map((report) => {
               if (report.lat && report.lng) {
                 return (
                   <Marker key={report.id} position={[report.lat, report.lng]}>
@@ -136,12 +152,12 @@ export default function MapViewSection() {
           Nearby Reported Issues
         </h3>
 
-        {reports.length === 0 ? (
+        {activeReports.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '32px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', color: '#64748b', fontSize: '0.9rem' }}>
             No active map reports found.
           </div>
         ) : (
-          reports.map((report) => (
+          activeReports.map((report) => (
             <div 
               key={report.id}
               style={{
