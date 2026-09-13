@@ -4,7 +4,7 @@ import { collection, onSnapshot, query, orderBy, doc, updateDoc } from 'firebase
 import Analytics from '../components/Analytics';
 
 export default function AdminDashboard({ user, onLogout }) {
-  const [activeTab, setActiveTab] = useState('Users');
+  const [activeTab, setActiveTab] = useState('Overview');
   const [reports, setReports] = useState([]);
   const [users, setUsers] = useState([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
@@ -48,113 +48,48 @@ export default function AdminDashboard({ user, onLogout }) {
     }
   };
 
-  const totalReports = reports.length || 6;
-  const pendingCount = reports.filter(r => r.status === 'Pending').length || 3;
-  const inProgressCount = reports.filter(r => r.status === 'In Progress').length || 2;
-  const resolvedCount = reports.filter(r => r.status === 'Resolved').length || 1;
-  const completionRate = totalReports > 0 ? Math.round((resolvedCount / totalReports) * 100) : 17;
+  // Dynamic calculations from real citizen reports
+  const totalReports = reports.length;
+  const pendingCount = reports.filter(r => r.status === 'Pending').length;
+  const inProgressCount = reports.filter(r => r.status === 'In Progress').length;
+  const resolvedCount = reports.filter(r => r.status === 'Resolved').length;
+  const completionRate = totalReports > 0 ? Math.round((resolvedCount / totalReports) * 100) : 0;
 
-  const categories = [
-    { name: 'Roads', count: 1, color: '#ef4444' },
-    { name: 'Street Lights', count: 1, color: '#8b5cf6' },
-    { name: 'Sanitation', count: 1, color: '#10b981' },
-    { name: 'Water', count: 1, color: '#3b82f6' },
-    { name: 'Parks', count: 1, color: '#06b6d4' }
-  ];
-
-  const defaultHighPriority = [
-    { category: 'Sanitation', title: 'Container overflow near city market causing waste accumulation.', location: 'Sheshi Hasan Prishtina, Vushtrri', votes: 62 },
-    { category: 'Roads', title: 'Damaged asphalt and deep potholes affecting vehicle traffic.', location: 'Rruga Dëshmorët e Kombit, Vushtrri', votes: 45 },
-    { category: 'Street Lights', title: 'Non-functional lighting poles creating visibility risks at night.', location: 'Bajr Neighborhood, Vushtrri', votes: 41 }
-  ];
-
-  const baseDistricts = [
-    {
-      id: 'qender',
-      name: 'Qendër (Center)',
-      subtext: 'Sheshi Hasan Prishtina & Old Town',
-      issues: 3,
-      intensity: 'High',
-      badgeClass: 'high',
-      bgColor: 'linear-gradient(135deg, #fca5a5 0%, #fdba74 100%)'
-    },
-    {
-      id: 'bajr',
-      name: 'Bajr',
-      subtext: 'Residential & Commercial Zone',
-      issues: 2,
-      intensity: 'Medium',
-      badgeClass: 'medium',
-      bgColor: 'linear-gradient(135deg, #fde68a 0%, #fef08a 100%)'
-    },
-    {
-      id: 'stacioni',
-      name: 'Stacioni',
-      subtext: 'Railway Station & Surroundings',
-      issues: 2,
-      intensity: 'Low',
-      badgeClass: 'low',
-      bgColor: 'linear-gradient(135deg, #fef08a 0%, #d9f99d 100%)'
-    },
-    {
-      id: 'gumnishte',
-      name: 'Gumnishtë',
-      subtext: 'Northern Sector',
-      issues: 1,
-      intensity: 'Low',
-      badgeClass: 'low',
-      bgColor: 'linear-gradient(135deg, #fef08a 0%, #d9f99d 100%)'
-    },
-    {
-      id: 'malisheve',
-      name: 'Malishevë',
-      subtext: 'Southern Residential Area',
-      issues: 1,
-      intensity: 'Medium',
-      badgeClass: 'medium',
-      bgColor: 'linear-gradient(135deg, #fde68a 0%, #fef08a 100%)'
+  const getCategoryColor = (name) => {
+    switch ((name || '').toLowerCase()) {
+      case 'roads': return '#ef4444';
+      case 'street lights': return '#8b5cf6';
+      case 'sanitation': return '#10b981';
+      case 'water': return '#3b82f6';
+      case 'parks': return '#06b6d4';
+      default: return '#0d9488';
     }
-  ];
+  };
 
-  const districts = baseDistricts.map(d => {
-    const matchedReports = reports.filter(r => {
-      const rDist = (r.district || '').toLowerCase();
-      const rLoc = (r.location || '').toLowerCase();
-      return rDist === d.id || rDist === d.name.toLowerCase() || rLoc.includes(d.name.toLowerCase()) || rLoc.includes('vushtrri');
-    });
+  const categoryCounts = reports.reduce((acc, report) => {
+    const cat = report.category || 'Roads';
+    acc[cat] = (acc[cat] || 0) + 1;
+    return acc;
+  }, {});
 
-    const issuesCount = reports.length > 0 ? matchedReports.length : d.issues;
+  const dynamicCategories = Object.keys(categoryCounts).length > 0
+    ? Object.entries(categoryCounts).map(([name, count]) => ({
+        name,
+        count,
+        percentage: totalReports > 0 ? Math.round((count / totalReports) * 100) : 0,
+        color: getCategoryColor(name)
+      }))
+    : [
+        { name: 'Roads', count: 0, percentage: 0, color: '#ef4444' },
+        { name: 'Street Lights', count: 0, percentage: 0, color: '#8b5cf6' },
+        { name: 'Sanitation', count: 0, percentage: 0, color: '#10b981' },
+        { name: 'Water', count: 0, percentage: 0, color: '#3b82f6' },
+        { name: 'Parks', count: 0, percentage: 0, color: '#06b6d4' }
+      ];
 
-    let intensity = 'Low';
-    let badgeClass = 'low';
-    if (issuesCount >= 10) {
-      intensity = 'High';
-      badgeClass = 'high';
-    } else if (issuesCount >= 5) {
-      intensity = 'Medium';
-      badgeClass = 'medium';
-    } else {
-      intensity = 'Low';
-      badgeClass = 'low';
-    }
-
-    let bgColor = d.bgColor;
-    if (intensity === 'High') {
-      bgColor = 'linear-gradient(135deg, #fca5a5 0%, #fdba74 100%)';
-    } else if (intensity === 'Medium') {
-      bgColor = 'linear-gradient(135deg, #fde68a 0%, #fef08a 100%)';
-    } else {
-      bgColor = 'linear-gradient(135deg, #fef08a 0%, #d9f99d 100%)';
-    }
-
-    return {
-      ...d,
-      issues: issuesCount,
-      intensity,
-      badgeClass,
-      bgColor
-    };
-  });
+  const highPriorityReports = [...reports]
+    .sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0))
+    .slice(0, 3);
 
   const getBadgeStyle = (type) => {
     switch ((type || '').toLowerCase()) {
@@ -216,7 +151,7 @@ export default function AdminDashboard({ user, onLogout }) {
           </div>
 
           <nav style={{ display: 'flex', gap: '4px' }}>
-            {['Overview', 'Analytics', 'Heatmap', 'Issues', 'Users'].map((tab) => (
+            {['Overview', 'Analytics', 'Issues', 'Users'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -294,17 +229,18 @@ export default function AdminDashboard({ user, onLogout }) {
                 Vushtrri Admin Dashboard
               </h1>
               <p style={{ margin: 0, fontSize: '0.9rem', color: '#64748b' }}>
-                Monitor and manage civic reports across Vushtrri neighborhoods
+                Monitor and manage live civic reports submitted by citizens across Vushtrri
               </p>
             </div>
 
+            {/* Metrics Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
               <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.9rem', fontWeight: 500 }}>
                   Total Reports <span style={{ width: '18px', height: '18px', borderRadius: '50%', border: '1.5px solid #94a3b8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem' }}>!</span>
                 </div>
                 <div style={{ fontSize: '2rem', fontWeight: 700, color: '#0f172a', margin: '12px 0 4px 0' }}>{totalReports}</div>
-                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>All time</div>
+                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Live database count</div>
               </div>
 
               <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
@@ -312,7 +248,7 @@ export default function AdminDashboard({ user, onLogout }) {
                   Pending <span style={{ color: '#d97706' }}>⏱️</span>
                 </div>
                 <div style={{ fontSize: '2rem', fontWeight: 700, color: '#d97706', margin: '12px 0 4px 0' }}>{pendingCount}</div>
-                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{Math.round((pendingCount / totalReports) * 100)}% of total</div>
+                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{totalReports > 0 ? Math.round((pendingCount / totalReports) * 100) : 0}% of total</div>
               </div>
 
               <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
@@ -320,7 +256,7 @@ export default function AdminDashboard({ user, onLogout }) {
                   In Progress <span style={{ color: '#2563eb' }}>📈</span>
                 </div>
                 <div style={{ fontSize: '2rem', fontWeight: 700, color: '#2563eb', margin: '12px 0 4px 0' }}>{inProgressCount}</div>
-                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{Math.round((inProgressCount / totalReports) * 100)}% of total</div>
+                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{totalReports > 0 ? Math.round((inProgressCount / totalReports) * 100) : 0}% of total</div>
               </div>
 
               <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
@@ -332,21 +268,22 @@ export default function AdminDashboard({ user, onLogout }) {
               </div>
             </div>
 
+            {/* Categories & High Priority Citizen Reports */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
               <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
                 <h3 style={{ margin: '0 0 20px 0', fontSize: '1.1rem', fontWeight: 700, color: '#0f172a' }}>Top Issue Categories</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {categories.map((cat, idx) => (
+                  {dynamicCategories.map((cat, idx) => (
                     <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', fontWeight: 500, color: '#334155' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: cat.color }}></span>
                           {cat.name}
                         </span>
-                        <span style={{ color: '#64748b' }}>1 (17%)</span>
+                        <span style={{ color: '#64748b' }}>{cat.count} ({cat.percentage}%)</span>
                       </div>
                       <div style={{ width: '100%', height: '6px', backgroundColor: '#f1f5f9', borderRadius: '3px', overflow: 'hidden' }}>
-                        <div style={{ width: '17%', height: '100%', backgroundColor: cat.color, borderRadius: '3px' }}></div>
+                        <div style={{ width: `${cat.percentage}%`, height: '100%', backgroundColor: cat.color, borderRadius: '3px' }}></div>
                       </div>
                     </div>
                   ))}
@@ -355,28 +292,34 @@ export default function AdminDashboard({ user, onLogout }) {
 
               <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
                 <h3 style={{ margin: '0 0 20px 0', fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ color: '#ef4444' }}>📈</span> High Priority Issues in Vushtrri
+                  <span style={{ color: '#ef4444' }}>📈</span> Top Citizen Reports
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {defaultHighPriority.map((item, idx) => (
-                    <div key={idx} style={{ padding: '14px', borderRadius: '12px', border: '1px solid #f1f5f9', backgroundColor: '#fafafa', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.75rem', backgroundColor: '#ecfdf5', color: '#047857', padding: '2px 8px', borderRadius: '6px', fontWeight: 600, border: '1px solid #a7f3d0' }}>
-                          {item.category}
-                        </span>
-                        <span style={{ fontSize: '0.8rem', color: '#ef4444', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px' }}>
-                          📈 {item.votes} votes
-                        </span>
+                {highPriorityReports.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {highPriorityReports.map((item) => (
+                      <div key={item.id} style={{ padding: '14px', borderRadius: '12px', border: '1px solid #f1f5f9', backgroundColor: '#fafafa', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.75rem', backgroundColor: '#ecfdf5', color: '#047857', padding: '2px 8px', borderRadius: '6px', fontWeight: 600, border: '1px solid #a7f3d0' }}>
+                            {item.category}
+                          </span>
+                          <span style={{ fontSize: '0.8rem', color: '#ef4444', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px' }}>
+                            📈 {item.upvotes || 0} votes
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 500, color: '#334155', lineHeight: 1.4 }}>
+                          {item.title || item.description || 'Citizen civic report'}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          📍 {item.location || 'Vushtrri'}
+                        </div>
                       </div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 500, color: '#334155', lineHeight: 1.4 }}>
-                        {item.title}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        📍 {item.location}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ padding: '32px 0', textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
+                    No citizen reports submitted yet.
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -389,148 +332,29 @@ export default function AdminDashboard({ user, onLogout }) {
         {activeTab === 'Issues' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <h1 style={{ margin: '0 0 4px 0', fontSize: '1.5rem', fontWeight: 700, color: '#0f172a' }}>Manage Vushtrri Reports & Issues</h1>
-            {reports.map((report) => (
-              <div key={report.id} style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontWeight: 600, color: '#0f172a' }}>{report.category} - {report.location}</div>
-                  <div style={{ fontSize: '0.9rem', color: '#64748b' }}>{report.description}</div>
-                </div>
-                <select
-                  value={report.status}
-                  onChange={(e) => handleUpdateStatus(report.id, e.target.value)}
-                  style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
-                >
-                  <option value="Pending">Pending</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Resolved">Resolved</option>
-                </select>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Heatmap Tab */}
-        {activeTab === 'Heatmap' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-            <div style={{ position: 'relative' }}>
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: '2fr 1fr', 
-                gridTemplateRows: 'auto auto', 
-                gap: '20px' 
-              }}>
-                <div style={{
-                  background: districts[0].bgColor,
-                  borderRadius: '24px',
-                  padding: '60px 20px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  textAlign: 'center',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-                  gridRow: '1 / span 2'
-                }}>
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    backgroundColor: '#ffffff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginBottom: '12px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                  }}>
-                    <span style={{ fontSize: '20px' }}>🎯</span>
+            {reports.length > 0 ? (
+              reports.map((report) => (
+                <div key={report.id} style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, color: '#0f172a' }}>{report.category} - {report.location || 'Vushtrri'}</div>
+                    <div style={{ fontSize: '0.9rem', color: '#64748b' }}>{report.description || report.title}</div>
                   </div>
-                  <h2 style={{ margin: '0 0 4px 0', fontSize: '1.4rem', color: '#1e293b', fontWeight: 700 }}>{districts[0].name}</h2>
-                  <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: '0.9rem' }}>{districts[0].subtext}</p>
-                  <span style={{
-                    backgroundColor: districts[0].intensity === 'High' ? '#fee2e2' : districts[0].intensity === 'Medium' ? '#fef3c7' : '#dcfce7',
-                    color: districts[0].intensity === 'High' ? '#ef4444' : districts[0].intensity === 'Medium' ? '#d97706' : '#16a34a',
-                    padding: '4px 14px',
-                    borderRadius: '20px',
-                    fontWeight: 600,
-                    fontSize: '0.85rem'
-                  }}>
-                    {districts[0].issues} issues
-                  </span>
+                  <select
+                    value={report.status}
+                    onChange={(e) => handleUpdateStatus(report.id, e.target.value)}
+                    style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Resolved">Resolved</option>
+                  </select>
                 </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
-                  <div style={{
-                    background: districts[1].bgColor,
-                    borderRadius: '20px',
-                    padding: '30px 20px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    textAlign: 'center'
-                  }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>🎯</div>
-                    <h3 style={{ margin: '0 0 2px 0', fontSize: '1.1rem', color: '#1e293b' }}>{districts[1].name}</h3>
-                    <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '0.8rem' }}>{districts[1].subtext}</p>
-                    <span style={{ backgroundColor: districts[1].intensity === 'High' ? '#fee2e2' : districts[1].intensity === 'Medium' ? '#fef3c7' : '#dcfce7', color: districts[1].intensity === 'High' ? '#ef4444' : districts[1].intensity === 'Medium' ? '#d97706' : '#16a34a', padding: '2px 12px', borderRadius: '16px', fontSize: '0.8rem', fontWeight: 600 }}>
-                      {districts[1].issues} Issues
-                    </span>
-                  </div>
-
-                  <div style={{
-                    background: districts[2].bgColor,
-                    borderRadius: '20px',
-                    padding: '30px 20px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    textAlign: 'center'
-                  }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>🎯</div>
-                    <h3 style={{ margin: '0 0 2px 0', fontSize: '1.1rem', color: '#1e293b' }}>{districts[2].name}</h3>
-                    <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '0.8rem' }}>{districts[2].subtext}</p>
-                    <span style={{ backgroundColor: districts[2].intensity === 'High' ? '#fee2e2' : districts[2].intensity === 'Medium' ? '#fef3c7' : '#dcfce7', color: districts[2].intensity === 'High' ? '#ef4444' : districts[2].intensity === 'Medium' ? '#d97706' : '#16a34a', padding: '2px 12px', borderRadius: '16px', fontSize: '0.8rem', fontWeight: 600 }}>
-                      {districts[2].issues} Issues
-                    </span>
-                  </div>
-                </div>
+              ))
+            ) : (
+              <div style={{ backgroundColor: '#fff', borderRadius: '16px', padding: '48px', textAlign: 'center', color: '#64748b', border: '1px solid #e2e8f0' }}>
+                No reports found in the database.
               </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' }}>
-                <div style={{
-                  background: districts[3].bgColor,
-                  borderRadius: '20px',
-                  padding: '30px 20px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  textAlign: 'center'
-                }}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>🎯</div>
-                  <h3 style={{ margin: '0 0 2px 0', fontSize: '1.1rem', color: '#1e293b' }}>{districts[3].name}</h3>
-                  <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '0.8rem' }}>{districts[3].subtext}</p>
-                  <span style={{ backgroundColor: districts[3].intensity === 'High' ? '#fee2e2' : districts[3].intensity === 'Medium' ? '#fef3c7' : '#dcfce7', color: districts[3].intensity === 'High' ? '#ef4444' : districts[3].intensity === 'Medium' ? '#d97706' : '#16a34a', padding: '2px 12px', borderRadius: '16px', fontSize: '0.8rem', fontWeight: 600 }}>
-                    {districts[3].issues} Issues
-                  </span>
-                </div>
-
-                <div style={{
-                  background: districts[4].bgColor,
-                  borderRadius: '20px',
-                  padding: '30px 20px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  textAlign: 'center'
-                }}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>🎯</div>
-                  <h3 style={{ margin: '0 0 2px 0', fontSize: '1.1rem', color: '#1e293b' }}>{districts[4].name}</h3>
-                  <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '0.8rem' }}>{districts[4].subtext}</p>
-                  <span style={{ backgroundColor: districts[4].intensity === 'High' ? '#fee2e2' : districts[4].intensity === 'Medium' ? '#fef3c7' : '#dcfce7', color: districts[4].intensity === 'High' ? '#ef4444' : districts[4].intensity === 'Medium' ? '#d97706' : '#16a34a', padding: '2px 12px', borderRadius: '16px', fontSize: '0.8rem', fontWeight: 600 }}>
-                    {districts[4].issues} Issues
-                  </span>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -548,7 +372,6 @@ export default function AdminDashboard({ user, onLogout }) {
               gap: '20px',
               boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
             }}>
-              {/* Fixed Header Layout without wrapping/overflow issues */}
               <div style={{ 
                 display: 'flex', 
                 justifyContent: 'space-between', 
@@ -637,11 +460,23 @@ export default function AdminDashboard({ user, onLogout }) {
                             <td style={{ padding: '16px', fontWeight: 600 }}>{reportCount}</td>
                             <td style={{ padding: '16px', color: '#64748b', fontSize: '0.85rem' }}>{u.joined || 'N/A'}</td>
                             <td style={{ padding: '16px', textAlign: 'right' }}>
-                              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                                <button title="Permissions" style={{ padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>🛡️</button>
-                                <button title="Deactivate/Delete" style={{ padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>👤❌</button>
-                                <button title="Reset Password" style={{ padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>🔑</button>
-                              </div>
+                              <button
+                                onClick={() => {
+                                  alert(`Manage user: ${u.name || u.email}`);
+                                }}
+                                style={{
+                                  padding: '6px 12px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #cbd5e1',
+                                  backgroundColor: '#ffffff',
+                                  color: '#334155',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 600,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Edit Role
+                              </button>
                             </td>
                           </tr>
                         );
@@ -656,7 +491,6 @@ export default function AdminDashboard({ user, onLogout }) {
                   </tbody>
                 </table>
               </div>
-
             </div>
 
           </div>

@@ -1,208 +1,169 @@
 import React, { useState } from 'react';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { db } from '../../firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
-const VUSHTRRI_LOCATIONS = [
-  'Qendra (Center), Vushtrri',
-  'Rruga Adem Jashari, Vushtrri',
-  'Rruga Ismail Qemali, Vushtrri',
-  'Rruga Dëshmorët e Kombit, Vushtrri',
-  'Kalaja e Vushtrrisë (Castle Area), Vushtrri',
-  'Ura e Gurit, Vushtrri',
-  'Sfaraçak, Vushtrri',
-  'Maxhunaj, Vushtrri'
-];
+// Fix for default Leaflet marker icon pathing in React
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
-export default function ReportFormSection({ onAddReport, currentUser }) {
+// Default coordinates centered on Vushtrri, Kosovo
+const VUSHTRRI_CENTER = [42.8231, 20.9675];
+
+// Map helper component to handle click events for pin placement
+function LocationSelector({ position, setPosition }) {
+  useMapEvents({
+    click(e) {
+      setPosition([e.latlng.lat, e.latlng.lng]);
+    },
+  });
+  return position === null ? null : <Marker position={position} />;
+}
+
+export default function ReportFormSection({ currentUser, onAddReport }) {
   const [category, setCategory] = useState('Roads');
-  const [location, setLocation] = useState('');
+  const [locationName, setLocationName] = useState('');
   const [description, setDescription] = useState('');
-  const [imagePreview, setImagePreview] = useState(null);
-  const [isGeolocating, setIsGeolocating] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Convert uploaded image to base64 string
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleRemoveImage = () => {
-    setImagePreview(null);
-  };
-
-  // GPS Fallback & Coordinate Capture for Vushtrri
-  const handleUseGPS = () => {
-    setIsGeolocating(true);
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setLocation(`Vushtrri (${latitude.toFixed(4)}° N, ${longitude.toFixed(4)}° E)`);
-          setIsGeolocating(false);
-        },
-        () => {
-          setLocation('Qendra, Vushtrri, Kosovo (42.8231° N, 20.9675° E)');
-          setIsGeolocating(false);
-        }
-      );
-    } else {
-      setLocation('Qendra, Vushtrri, Kosovo');
-      setIsGeolocating(false);
-    }
-  };
+  const [imageUrl, setImageUrl] = useState('');
+  const [position, setPosition] = useState(null); // stores [lat, lng]
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!description.trim() || isSubmitting) return;
+    if (!position) {
+      alert('Please click on the map to pin the exact location of the issue in Vushtrri.');
+      return;
+    }
 
-    setIsSubmitting(true);
-
-    const finalLocation = location.trim() 
-      ? (location.toLowerCase().includes('vushtrri') ? location : `${location}, Vushtrri`)
-      : 'Qendra, Vushtrri';
-
+    setLoading(true);
     try {
-      const newReportData = {
+      // Save report with lat and lng matching what MapViewSection expects
+      await addDoc(collection(db, "reports"), {
+        category,
+        location: locationName,
+        description,
+        imageUrl: imageUrl || '',
+        lat: position[0],
+        lng: position[1],
         status: 'Pending',
-        category: category,
-        description: description.trim(),
-        imageUrl: imagePreview || null,
-        location: finalLocation,
+        author: currentUser?.displayName || 'Demo Citizen',
+        date: new Date().toLocaleDateString(),
         createdAt: serverTimestamp(),
-        date: new Date().toLocaleDateString('en-US'),
-        author: currentUser?.displayName || currentUser?.email || 'Demo Citizen',
-        userId: currentUser?.uid || null,
-        upvotes: 0,
-        commentsCount: 0,
-        assignedTo: null
-      };
+      });
 
-      // Write directly to Firestore "reports" collection
-      const docRef = await addDoc(collection(db, "reports"), newReportData);
-
-      if (onAddReport) {
-        onAddReport({ id: docRef.id, ...newReportData });
-      }
-
-      // Reset form
+      // Reset form fields
+      setLocationName('');
       setDescription('');
-      setLocation('');
-      setImagePreview(null);
+      setImageUrl('');
+      setPosition(null);
+      if (onAddReport) onAddReport();
+      alert('Report submitted successfully and pinned on the map!');
     } catch (error) {
-      console.error("Error submitting report to Firebase:", error);
-      alert("Failed to submit report. Please check your connection or Firebase config.");
+      console.error('Error adding report:', error);
+      alert('Failed to submit report.');
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="report-form-card">
-      <div className="form-header-banner">
-        <div className="info-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00796b" strokeWidth="2">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-        </div>
-        <div>
-          <h3>Report an Issue in Vushtrri</h3>
-          <p>Help improve our municipality by reporting local urban issues</p>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="report-form">
-        <div className="form-row">
-          <div className="form-group flex-1">
-            <label>Category</label>
-            <select value={category} onChange={(e) => setCategory(e.target.value)}>
-              <option value="Roads">Roads & Sidewalks</option>
-              <option value="Water">Water & Sewage</option>
-              <option value="Parks">Parks & Public Spaces</option>
-              <option value="Electricity">Electricity & Lighting</option>
-              <option value="Sanitation">Sanitation & Waste</option>
+    <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+      <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', fontWeight: 700, color: '#0f172a' }}>
+        Report a New Issue in Vushtrri
+      </h3>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Category</label>
+            <select 
+              value={category} 
+              onChange={(e) => setCategory(e.target.value)}
+              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
+            >
+              <option value="Roads">Roads</option>
+              <option value="Water">Water</option>
+              <option value="Parks">Parks</option>
+              <option value="Electricity">Electricity</option>
+              <option value="Sanitation">Sanitation</option>
             </select>
           </div>
-
-          <div className="form-group flex-1">
-            <label>Location in Vushtrri</label>
-            <div className="input-with-icon">
-              <input 
-                type="text" 
-                list="vushtrri-locations"
-                placeholder="e.g. Rruga Adem Jashari, Vushtrri" 
-                value={location} 
-                onChange={(e) => setLocation(e.target.value)}
-              />
-              <datalist id="vushtrri-locations">
-                {VUSHTRRI_LOCATIONS.map((loc, idx) => (
-                  <option key={idx} value={loc} />
-                ))}
-              </datalist>
-              <button 
-                type="button" 
-                className="gps-btn" 
-                onClick={handleUseGPS}
-                title="Get GPS Coordinates in Vushtrri"
-              >
-                {isGeolocating ? '...' : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z" />
-                    <circle cx="12" cy="10" r="3" />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label>Description</label>
-          <textarea 
-            rows="3" 
-            placeholder="Describe the issue in detail..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-          ></textarea>
-        </div>
-
-        <div className="form-group">
-          <label>Photo (Optional)</label>
-          <div className="upload-container">
-            <label htmlFor="photo-upload" className="upload-photo-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                <circle cx="12" cy="13" r="4"></circle>
-              </svg>
-              {imagePreview ? 'Change Photo' : 'Upload Photo'}
-            </label>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Location Title / Street Name</label>
             <input 
-              id="photo-upload" 
-              type="file" 
-              accept="image/*" 
-              onChange={handleImageChange} 
-              style={{ display: 'none' }}
+              type="text" 
+              placeholder="e.g. Dëshmorët e Kombit St." 
+              value={locationName} 
+              onChange={(e) => setLocationName(e.target.value)} 
+              required
+              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', boxSizing: 'border-box' }}
             />
-            {imagePreview && (
-              <div className="preview-thumbnail">
-                <img src={imagePreview} alt="Preview" />
-                <button type="button" onClick={handleRemoveImage} title="Remove image">×</button>
-              </div>
-            )}
           </div>
         </div>
 
-        <button type="submit" className="submit-report-btn" disabled={isSubmitting}>
-          {isSubmitting ? 'Submitting to Firestore...' : 'Submit Report'}
+        <div>
+          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Description</label>
+          <textarea 
+            placeholder="Describe the issue in detail..." 
+            value={description} 
+            onChange={(e) => setDescription(e.target.value)} 
+            rows="3"
+            required
+            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', boxSizing: 'border-box' }}
+          />
+        </div>
+
+        <div>
+          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Image URL (Optional)</label>
+          <input 
+            type="url" 
+            placeholder="https://example.com/image.jpg" 
+            value={imageUrl} 
+            onChange={(e) => setImageUrl(e.target.value)} 
+            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', boxSizing: 'border-box' }}
+          />
+        </div>
+
+        <div>
+          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+            Click on the map to pin exact location in Vushtrri: {position && <span style={{ color: '#0284c7', fontWeight: 'normal' }}>({position[0].toFixed(4)}, {position[1].toFixed(4)})</span>}
+          </label>
+          <div style={{ height: '280px', width: '100%', borderRadius: '10px', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
+            <MapContainer 
+              center={VUSHTRRI_CENTER} 
+              zoom={14} 
+              style={{ height: '100%', width: '100%' }}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              />
+              <LocationSelector position={position} setPosition={setPosition} />
+            </MapContainer>
+          </div>
+        </div>
+
+        <button 
+          type="submit" 
+          disabled={loading}
+          style={{ 
+            backgroundColor: '#009688', 
+            color: '#ffffff', 
+            border: 'none', 
+            borderRadius: '8px', 
+            padding: '12px', 
+            fontWeight: 600, 
+            fontSize: '0.95rem', 
+            cursor: 'pointer',
+            marginTop: '4px' 
+          }}
+        >
+          {loading ? 'Submitting Report...' : 'Submit Report & Pin on Map'}
         </button>
       </form>
     </div>
