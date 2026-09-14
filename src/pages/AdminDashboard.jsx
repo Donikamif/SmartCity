@@ -138,7 +138,6 @@ export default function AdminDashboard({ user, onLogout }) {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       
-      {/* Top Navbar */}
       <header style={{
         backgroundColor: '#ffffff',
         borderBottom: '1px solid #e2e8f0',
@@ -224,10 +223,8 @@ export default function AdminDashboard({ user, onLogout }) {
         </div>
       </header>
 
-      {/* Main Content Area */}
       <main style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto' }}>
         
-        {/* Overview Tab UI */}
         {activeTab === 'Overview' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <div>
@@ -239,7 +236,6 @@ export default function AdminDashboard({ user, onLogout }) {
               </p>
             </div>
 
-            {/* Metrics Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
               <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.9rem', fontWeight: 500 }}>
@@ -274,7 +270,6 @@ export default function AdminDashboard({ user, onLogout }) {
               </div>
             </div>
 
-            {/* Categories & High Priority Citizen Reports */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
               <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
                 <h3 style={{ margin: '0 0 20px 0', fontSize: '1.1rem', fontWeight: 700, color: '#0f172a' }}>Top Issue Categories</h3>
@@ -328,10 +323,8 @@ export default function AdminDashboard({ user, onLogout }) {
           </div>
         )}
 
-        {/* Analytics Tab */}
         {activeTab === 'Analytics' && <Analytics reports={reports} />}
 
-        {/* Issues Tab */}
         {activeTab === 'Issues' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <h1 style={{ margin: '0 0 4px 0', fontSize: '1.5rem', fontWeight: 700, color: '#0f172a' }}>Manage Vushtrri Reports & Issues</h1>
@@ -361,7 +354,6 @@ export default function AdminDashboard({ user, onLogout }) {
           </div>
         )}
 
-        {/* Users Tab */}
         {activeTab === 'Users' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             
@@ -411,7 +403,6 @@ export default function AdminDashboard({ user, onLogout }) {
                 </div>
               </div>
 
-              {/* Users Table */}
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
                   <thead>

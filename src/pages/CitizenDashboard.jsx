@@ -6,11 +6,10 @@ import MapViewSection from '../components/organisms/MapViewSection';
 import './CitizenDashboard.css';
 
 export default function CitizenDashboard({ user, onLogout }) {
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'map'
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [reports, setReports] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
 
-  // Real-time listener for Firestore "reports" collection
   useEffect(() => {
     const q = query(collection(db, "reports"), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -26,7 +25,6 @@ export default function CitizenDashboard({ user, onLogout }) {
     return () => unsubscribe();
   }, []);
 
-  // Filter out resolved reports for citizens, then apply category filter
   const activeReports = reports.filter(r => r.status !== 'Resolved');
 
   const filteredReports = selectedCategory === 'All' 
@@ -36,7 +34,6 @@ export default function CitizenDashboard({ user, onLogout }) {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f0f4f8', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       
-      {/* Navigation Header */}
       <header style={{ 
         backgroundColor: '#ffffff', 
         borderBottom: '1px solid #e2e8f0', 
@@ -50,7 +47,6 @@ export default function CitizenDashboard({ user, onLogout }) {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
           
-          {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ 
               width: '36px', 
@@ -70,7 +66,6 @@ export default function CitizenDashboard({ user, onLogout }) {
             <span style={{ fontSize: '1.25rem', fontWeight: '700', color: '#0f172a' }}>SmartCity</span>
           </div>
 
-          {/* Navigation Items */}
           <nav style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button 
               type="button"
@@ -109,7 +104,6 @@ export default function CitizenDashboard({ user, onLogout }) {
           </nav>
         </div>
 
-        {/* User Info & Logout Button */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ color: '#64748b', display: 'flex', alignItems: 'center' }}>
@@ -153,23 +147,18 @@ export default function CitizenDashboard({ user, onLogout }) {
         </div>
       </header>
 
-      {/* Main Container */}
       <main style={{ maxWidth: '960px', margin: '32px auto', padding: '0 20px' }}>
         
-        {/* DASHBOARD TAB */}
         {activeTab === 'dashboard' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
             
-            {/* Top Section: Report Form */}
             <ReportFormSection 
               currentUser={user} 
               onAddReport={() => setActiveTab('dashboard')} 
             />
 
-            {/* Bottom Section: Category Filter & Feed */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               
-              {/* Category Filter Pills */}
               <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
                 {['All', 'Roads', 'Water', 'Parks', 'Electricity', 'Sanitation'].map(cat => (
                   <button
@@ -194,7 +183,6 @@ export default function CitizenDashboard({ user, onLogout }) {
                 ))}
               </div>
 
-              {/* Feed Cards */}
               {filteredReports.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '40px 16px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                   <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>No reports recorded yet.</p>
@@ -253,7 +241,6 @@ export default function CitizenDashboard({ user, onLogout }) {
           </div>
         )}
 
-        {/* MAP VIEW TAB */}
         {activeTab === 'map' && <MapViewSection />}
 
       </main>

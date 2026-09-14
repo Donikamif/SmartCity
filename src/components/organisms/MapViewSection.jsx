@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import { db } from '../../firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 
-// Fix for default Leaflet marker icon pathing in React
+
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
@@ -13,10 +13,10 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Default coordinates centered on Vushtrri, Kosovo
+
 const VUSHTRRI_CENTER = [42.8231, 20.9675];
 
-// Helper to fix Leaflet tile rendering glitches when mounting/resizing
+
 function MapInvalidator() {
   const map = useMap();
   useEffect(() => {
@@ -51,7 +51,7 @@ export default function MapViewSection() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
-      {/* Map Container Card (Static / Normal Flow) */}
+  
       <div style={{
         backgroundColor: '#ffffff',
         borderRadius: '16px',
@@ -146,7 +146,7 @@ export default function MapViewSection() {
         </div>
       </div>
 
-      {/* Nearby Issues Scroll List */}
+     
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#0f172a' }}>
           Nearby Reported Issues

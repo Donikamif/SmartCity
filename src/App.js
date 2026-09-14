@@ -4,8 +4,10 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 
 import LoginCard from './components/organisms/LoginCard';
-import CitizenDashboard from './pages/CitizenDashboard'; // Adjust path if needed
-import AdminDashboard from './pages/AdminDashboard';   // Adjust path if needed
+import CitizenDashboard from './pages/CitizenDashboard'; 
+import AdminDashboard from './pages/AdminDashboard';   
+import OfficerDashboard from './pages/OfficerDashboard'; 
+
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -13,12 +15,12 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Listen for Firebase Auth state changes
+ 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
         
-        // Fetch user's assigned role from Firestore 'users' collection
+     
         try {
           const userDocRef = doc(db, "users", currentUser.uid);
           const userDocSnap = await getDoc(userDocRef);
@@ -27,7 +29,7 @@ export default function App() {
             const data = userDocSnap.data();
             setUserRole(data.role || 'Citizen');
           } else {
-            // Default fallback if no doc exists yet
+       
             setUserRole('Citizen');
           }
         } catch (error) {
@@ -69,16 +71,17 @@ export default function App() {
     );
   }
 
-  // 1. Unauthenticated View
   if (!user) {
     return <LoginCard onLoginSuccess={(loggedInUser) => setUser(loggedInUser)} />;
   }
 
-  // 2. Admin Dashboard View
   if (userRole === 'Admin') {
     return <AdminDashboard user={user} onLogout={handleLogout} />;
   }
+  if (userRole === 'Officer') {
+    return <OfficerDashboard user={user} onLogout={handleLogout} />;
+  }
 
-  // 3. Citizen / Officer View (Default)
+  
   return <CitizenDashboard user={user} onLogout={handleLogout} role={userRole} />;
 }
